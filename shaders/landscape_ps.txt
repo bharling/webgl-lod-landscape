@@ -1,0 +1,161 @@
+//--------------------------------------------------------------------------------------------------**
+// VARIABLES TO TWEAK
+
+
+//Material settings:
+vec3 ambientColor = vec3(0.06,0.15,0.2); 	// Set the ambient color (R,G,B)
+float specIntensity = 1.0;					// Set Specular intensity (default value = 1.0)
+float shininess = 10.0;						// Set shininess of the specular (between 1.0 and 10.0 is suggested)
+float maximumMix = 0.8;						// Set the maximum blending between far and near materials (default value = 1.0, between 0.0 and 1.0)
+float matNear = 0.02;						// distance where the far materiat start to appear (between 0.0 and 1.0)
+float matFar = 0.2;							// distance where the far material has replaced the near material (between 0.0 and 1.0)
+
+//Lighting settings:
+vec3 sunColor = vec3(1.0,0.8,0.6);			// Set the Sun color (R,G,B)
+float sunIntensity = 1.5;					// Set the Sun intensity (at least 0.0)
+vec3 sunDirection = vec3(-1.0,0.0,0.4);		// Set the sun direction (X,Y,Z)
+
+//Fog settings:
+float maxDist = 1200.0;						// Set the maximum ditance of view (blender units, look at the camera clipping)
+float midDist = 0.7;						// Set the intermediate fog distance, in percentage of the max. distance (between 0.0 and 1.0)
+vec3 fogColor2 = vec3(1.0,1.0,1.0);			// Set the ending fog color (R,G,B)
+vec3 fogColor = vec3(0.5,0.6,0.8);			// Set the intermediate fog color (R,G,B)
+
+// UV Coord.
+float tile = 512.0;							// Set the number of times the texture is repeated (near the player)
+float tileFar = 128.0;						// Set the number of times the texture is repeated (far from the player)
+
+// Texture
+float margin = 0.6;							// Set the margin around textures, for the multilayer file
+
+//---------------------------------------------------------------------------------------------------**
+
+	
+
+// get textures
+uniform sampler2D heightMap;
+uniform sampler2D multilayer;
+uniform sampler2D stencil;
+uniform sampler2D lightmap;
+
+
+//get vertex position
+varying vec4 position; 
+
+
+
+// prepare the tiled UVcoord for tiled multilayer
+float marginAdd = (0.25-margin*0.25)/2.0;
+vec2 TileUv = vec2 ((((gl_TexCoord[0].s*tile)-float(int(gl_TexCoord[0].s*tile)))/4.0)*margin+marginAdd,
+					(((gl_TexCoord[0].t*tile)-float(int(gl_TexCoord[0].t*tile)))/4.0)*margin+marginAdd);
+					
+vec2 TileUvFar = vec2 ((((gl_TexCoord[0].s*tileFar)-float(int(gl_TexCoord[0].s*tileFar)))/4.0)*margin+marginAdd,
+					(((gl_TexCoord[0].t*tileFar)-float(int(gl_TexCoord[0].t*tileFar)))/4.0)*margin+marginAdd);
+
+
+
+vec3 tex3(float posX, float posY){
+    vec3 textureMap3 = texture2D(multilayer, vec2(TileUv.x+posX,TileUv.y+posY)).rgb;
+	return textureMap3;
+}
+
+vec3 tex3Far(float posX, float posY){
+    vec3 textureMap3Far = texture2D(multilayer, vec2(TileUvFar.x+posX,TileUvFar.y+posY)).rgb;
+	return textureMap3Far;
+}
+
+vec3 prepareNM(vec3 exemple){
+   	vec3 gut = vec3(2.0, 2.0, 1.0) * exemple - vec3(1.0, 1.0, 1.0);
+	return gut;
+}
+
+
+void main()
+{
+
+// get the view vector
+vec3 viewDirection = -normalize(vec3(position)); 
+
+
+// get normals
+vec3 normalGlobal = normalize(vec3(2.0, 2.0, 1.0) * (texture2D(heightMap, gl_TexCoord[0].st).rgb) - vec3(1.0, 1.0, 0.0)); 
+
+
+// separate textures from multilayer file
+
+//material 1
+vec3 diffuseColor_mat1 = tex3(0.0,0.75);
+float specLevel_mat1 = tex3(0.0,0.5).x;
+vec3 normalDetails_mat1 = prepareNM(tex3(0.0,0.25));
+vec3 diffuseColorFar_mat1 = tex3Far(0.0,0.75);
+vec3 normalDetailsFar_mat1 = prepareNM(tex3Far(0.0,0.25));
+
+//material 2
+vec3 diffuseColor_mat2 = tex3(0.25,0.75);
+float specLevel_mat2 = tex3(0.25,0.5).x;
+vec3 normalDetails_mat2 = prepareNM(tex3(0.25,0.25));
+vec3 diffuseColorFar_mat2 = tex3Far(0.25,0.75);
+vec3 normalDetailsFar_mat2 = prepareNM(tex3Far(0.25,0.25));
+
+//material 3
+vec3 diffuseColor_mat3 =  tex3(0.5,0.75);
+float specLevel_mat3 = tex3(0.5,0.5).x;
+vec3 normalDetails_mat3 = prepareNM(tex3(0.5,0.25));
+vec3 diffuseColorFar_mat3 =tex3Far(0.5,0.75);
+vec3 normalDetailsFar_mat3 = prepareNM(tex3Far(0.5,0.25));
+
+//Material 4
+vec3 diffuseColor_mat4 = tex3(0.75,0.75);
+float specLevel_mat4 = tex3(0.75,0.5).x;
+vec3 normalDetails_mat4 = prepareNM(tex3(0.75,0.25));
+vec3 diffuseColorFar_mat4 = tex3Far(0.75,0.75);
+vec3 normalDetailsFar_mat4 =  prepareNM(tex3Far(0.75,0.25));
+
+
+// Stencils maps
+float stencil_mat2 = texture2D(stencil, gl_TexCoord[0].st).b;
+float stencil_mat3 = texture2D(stencil, gl_TexCoord[0].st).r;
+float stencil_mat4 = texture2D(stencil, gl_TexCoord[0].st).g;
+
+
+//lightmap
+float lightmap = texture2D(lightmap, gl_TexCoord[0].st).r;
+
+
+//Near Material
+vec3 normalAllDetails = mix(mix(mix(normalDetails_mat1,normalDetails_mat2,stencil_mat2),normalDetails_mat3,stencil_mat3),normalDetails_mat4,stencil_mat4);
+float specLevelAll = mix(mix(mix(specLevel_mat1,specLevel_mat2,stencil_mat2),specLevel_mat3,stencil_mat3),specLevel_mat4,stencil_mat4);
+vec3 normalFinal = normalize(normalGlobal+normalAllDetails);
+vec3 diffuseRawAll = ambientColor+lightmap*sunColor*(sunIntensity*max(0.0,dot(normalFinal, normalize(sunDirection)))); // compute diffuse lighting
+vec3 diffuseColorAll = mix(mix(mix(diffuseColor_mat1,diffuseColor_mat2,stencil_mat2),diffuseColor_mat3,stencil_mat3),diffuseColor_mat4,stencil_mat4);
+float specularAll = specIntensity*lightmap*max(0.0,(0.8*pow(dot(reflect(sunDirection, normalFinal), viewDirection), shininess)));// compute specular reflection
+vec3 materialAll = diffuseRawAll*diffuseColorAll+specularAll*specLevelAll;
+
+
+//Far Material
+vec3 normalDetailsFar = mix(mix(mix(normalDetailsFar_mat1,normalDetailsFar_mat2,stencil_mat2),normalDetailsFar_mat3,stencil_mat3),normalDetailsFar_mat4,stencil_mat4);
+vec3 normalFinalFar = normalize(normalGlobal+normalDetailsFar);
+vec3 diffuseRawFar = ambientColor+lightmap*sunColor*(sunIntensity*max(0.0,dot(normalFinalFar, normalize(sunDirection)))); // compute diffuse lighting
+vec3 diffuseColorFar = mix(mix(mix(diffuseColorFar_mat1,diffuseColorFar_mat2,stencil_mat2),diffuseColorFar_mat3,stencil_mat3),diffuseColorFar_mat4,stencil_mat4);
+vec3 materialFar = diffuseRawFar*diffuseColorFar;
+
+
+// getting fog distances
+float z = clamp((gl_FragCoord.z / gl_FragCoord.w / maxDist),0.0,1.0); // compute intermediate fog
+float zNear = clamp((1.0-(z/midDist)),0.0,1.0);
+float zFar = clamp((1.0-(z/(1.0-midDist)-midDist)),0.0,1.0);
+float zMat = clamp((1.0-(z/matNear-matFar)),0.0,maximumMix);
+
+
+// Mix near and far materials
+vec3 material = mix(materialFar,materialAll,zMat);
+
+
+// add fog
+vec3 beauty = mix(fogColor2,(mix(fogColor,material,zNear)),zFar);
+
+
+// set final values
+gl_FragColor.rgb = beauty;
+gl_FragColor.a = 1.0;
+}

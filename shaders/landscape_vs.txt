@@ -1,0 +1,26 @@
+// position of the vertex (and fragment) in view space
+varying vec4 position; 
+
+// getting texture and properties values
+uniform sampler2D heightMap;
+uniform int uvX;
+uniform int uvY;
+uniform float height;
+
+uniform int cellNumber;
+
+void main(){
+
+	//get the first UV layout
+	gl_TexCoord[0].x = gl_MultiTexCoord0.x+float(uvX)/float(cellNumber);
+	gl_TexCoord[0].y = gl_MultiTexCoord0.y+float(uvY)/float(cellNumber);
+	
+	// deform
+	vec4 v = gl_Vertex;
+	v.z += texture2D(heightMap, clamp(gl_TexCoord[0].st,0.0,1.0)).a*(0.03*height);
+	gl_Position = gl_ModelViewProjectionMatrix * v;
+	 
+	//get the vertex position
+	position = gl_Position;
+
+}
